@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        width: 960px;
+        height: 500px;
+        position: relative;
+    }
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    path.slice {
+        stroke-width: 2px;
+    }
+
+    polyline {
+        opacity: .3;
+        stroke: black;
+        stroke-width: 2px;
+        fill: none;
+    }
+</style>
+
+<body>
+    <!-- Place this tag where you want the button to render. -->
+    <a class="github-button" href="https://github.com/fearhat" data-style="mega" aria-label="Follow @fearhat on GitHub">Author</a>
+    <div id="title"></div>
+    <div id="subtitle">
+        <h3>Bitte unten auswählen</h3></div>
+    <div id="select">
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.12.0/lodash.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+        var request = new XMLHttpRequest();
+        request.open('GET', './data.json', true);
+
+        request.onload = function() {
+            if (request.status >= 200 && request.status < 400) {
+                // Success!
+                var data = JSON.parse(request.responseText);
+                var titleField = document.getElementById('title')
+                var subtitleField = document.getElementById('subtitle')
+                var update;
+                titleField.innerHTML = '<h1>Übersicht</h1>'
+
+                var selectField = document.getElementById('select')
+                selectField.innerHTML =
+                    `
+                  <select>
+                    <option>Auswählen</option>
+                    ${
+                      Object.keys(data.keys).map((key) => ('<option data-label="' + data.keys[key] + '" data-key="' + key + '" class="select-option" value=' + key + '>' + data.keys[key] + '</option>'))
+                    }
+                  </select>
+                `
+                var options = document.getElementsByClassName('select-option');
+                selectField.onchange = function(e) {
+                    var children = e.target.children;
+                    var active = [].find.call(children, (child) => {
+                        return child.selected
+                    })
+                    subtitleField.innerHTML = `<h3>${active.dataset.label || 'Bitte unten auswählen'}</h3>`
+                    update(generateData(data, active.dataset.key), active.dataset.key)
+                }
+                update = showLabel(data)
+
+                function generateData(data, column) {
+                    var allOptions = data.data.map((d) => d[column] && d[column].trim()).filter(d => d)
+                    var options = _.uniq(allOptions)
+                    if (column === 'hauptnutzung') return generateHauptnutzung(data, column);
+                    return options.map(function(label) {
+                        var other = allOptions.filter(k => k !== label).length
+                        var my = allOptions.filter(k => k === label).length
+                        return {
+                            label: label,
+                            value: other === 0 ? 1 : my / other,
+                            all: other,
+                            me: my,
+                        }
+                    });
+
+                    function generateHauptnutzung(data, column) {
+                        var allOptions = _.flatten(data.data.map((d) => d[column] && d[column].trim()).filter(d => d).map(d => d.split(',').map(dd => dd.trim())))
+                        var options = _.uniq(allOptions)
+                        return options.map(function(label) {
+                            var other = allOptions.filter(k => k !== label).length
+                            var my = allOptions.filter(k => k === label).length
+                            return {
+                                label: label,
+                                value: other === 0 ? 1 : my / other,
+                                all: other,
+                                me: my,
+                            }
+                        });
+                    }
+                }
+            } else {
+                // We reached our target server, but it returned an error
+                alert('Fehler beim Laden');
+            }
+        };
+
+        request.onerror = function() {
+            alert('Fehler beim Laden');
+            // There was a connection error of some sort
+        };
+
+        request.send();
+
+        function randomColor() {
+            return '#' + Math.floor(Math.random() * 16777215).toString(16);
+        }
+
+        function showLabel(data, column) {
+            var svg = d3.select('body')
+                .append('svg')
+                .append('g')
+
+            svg.append("g")
+                .attr("class", "slices");
+            svg.append("g")
+                .attr("class", "labels");
+            svg.append("g")
+                .attr("class", "lines");
+
+            var width = 960,
+                height = 450,
+                radius = Math.min(width, height) / 2;
+
+            var pie = d3.layout.pie()
+                .sort(null)
+                .value(function(d) {
+                    return d.value;
+                });
+
+            var arc = d3.svg.arc()
+                .outerRadius(radius * 0.8)
+                .innerRadius(radius * 0.4);
+
+            var outerArc = d3.svg.arc()
+                .innerRadius(radius * 0.9)
+                .outerRadius(radius * 0.9);
+
+            svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+            var key = function(d) {
+                return d.data.label;
+            };
+
+            var color = d3.scale.ordinal()
+                .domain(Object.keys(data.keys))
+                .range(Object.keys(data.keys).map(function(k) {
+                    return randomColor()
+                }));
+
+            function randomData() {
+                var labels = color.domain();
+                var allOptions = data.data.map((d) => d[column] && d[column].trim()).filter(d => d)
+                var options = _.uniq(allOptions)
+                return options.map(function(label) {
+                    var other = allOptions.filter(k => k !== label).length
+                    var my = allOptions.filter(k => k === label).length
+                    return {
+                        label: data.keys[label],
+                        value: my / other,
+                    }
+                });
+            }
+
+            change(randomData(), column);
+
+
+            function change(data, column) {
+                // console.log(data, column)
+                    /* ------- PIE SLICES -------*/
+                var slice = svg.select(".slices").selectAll("path.slice")
+                    .data(pie(data), key);
+
+                slice.enter()
+                    .insert("path")
+                    .style("fill", function(d) {
+                        return color(d.data.label);
+                    })
+                    .attr("class", "slice");
+
+                slice
+                    .transition().duration(1000)
+                    .attrTween("d", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            return arc(interpolate(t));
+                        };
+                    })
+
+                slice.exit()
+                    .remove();
+
+                /* ------- TEXT LABELS -------*/
+
+                var text = svg.select(".labels").selectAll("text")
+                    .data(pie(data), key);
+
+                text.enter()
+                    .append("text")
+                    .attr("dy", ".35em")
+                    .text(function(d) {
+                        return d.data.label;
+                    });
+
+                function midAngle(d) {
+                    return d.startAngle + (d.endAngle - d.startAngle) / 2;
+                }
+
+                text.transition().duration(1000)
+                    .attrTween("transform", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            var d2 = interpolate(t);
+                            var pos = outerArc.centroid(d2);
+                            pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+                            return "translate(" + pos + ")";
+                        };
+                    })
+                    .styleTween("text-anchor", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            var d2 = interpolate(t);
+                            return midAngle(d2) < Math.PI ? "start" : "end";
+                        };
+                    });
+
+                text.exit()
+                    .remove();
+
+                /* ------- SLICE TO TEXT POLYLINES -------*/
+
+                var polyline = svg.select(".lines").selectAll("polyline")
+                    .data(pie(data), key);
+
+                polyline.enter()
+                    .append("polyline");
+
+                polyline.transition().duration(1000)
+                    .attrTween("points", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            var d2 = interpolate(t);
+                            var pos = outerArc.centroid(d2);
+                            pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+                            return [arc.centroid(d2), outerArc.centroid(d2), pos];
+                        };
+                    });
+
+                polyline.exit()
+                    .remove();
+            };
+            return change
+        }
+
+        function draw(data) {
+            var svg = d3.select("body")
+                .append("svg")
+                .append("g")
+
+            svg.append("g")
+                .attr("class", "slices");
+            svg.append("g")
+                .attr("class", "labels");
+            svg.append("g")
+                .attr("class", "lines");
+
+            var width = 960,
+                height = 450,
+                radius = Math.min(width, height) / 2;
+
+            var pie = d3.layout.pie()
+                .sort(null)
+                .value(function(d) {
+                    return d.value;
+                });
+
+            var arc = d3.svg.arc()
+                .outerRadius(radius * 0.8)
+                .innerRadius(radius * 0.4);
+
+            var outerArc = d3.svg.arc()
+                .innerRadius(radius * 0.9)
+                .outerRadius(radius * 0.9);
+
+            svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+            var key = function(d) {
+                return d.data.label;
+            };
+
+            var color = d3.scale.ordinal()
+                .domain(Object.keys(data.keys))
+                .range(Object.keys(data.keys).map(function(k) {
+                    return randomColor()
+                }));
+
+            function randomData() {
+                var labels = color.domain();
+                return labels.map(function(label) {
+                    return {
+                        label: label,
+                        value: Math.random()
+                    }
+                });
+            }
+
+            change(randomData());
+
+            d3.select(".randomize")
+                .on("click", function() {
+                    change(randomData());
+                });
+
+
+            function change(data) {
+
+                /* ------- PIE SLICES -------*/
+                var slice = svg.select(".slices").selectAll("path.slice")
+                    .data(pie(data), key);
+
+                slice.enter()
+                    .insert("path")
+                    .style("fill", function(d) {
+                        return color(d.data.label);
+                    })
+                    .attr("class", "slice");
+
+                slice
+                    .transition().duration(1000)
+                    .attrTween("d", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            return arc(interpolate(t));
+                        };
+                    })
+
+                slice.exit()
+                    .remove();
+
+                /* ------- TEXT LABELS -------*/
+
+                var text = svg.select(".labels").selectAll("text")
+                    .data(pie(data), key);
+
+                text.enter()
+                    .append("text")
+                    .attr("dy", ".35em")
+                    .text(function(d) {
+                        return d.data.label;
+                    });
+
+                function midAngle(d) {
+                    return d.startAngle + (d.endAngle - d.startAngle) / 2;
+                }
+
+                text.transition().duration(1000)
+                    .attrTween("transform", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            var d2 = interpolate(t);
+                            var pos = outerArc.centroid(d2);
+                            pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+                            return "translate(" + pos + ")";
+                        };
+                    })
+                    .styleTween("text-anchor", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            var d2 = interpolate(t);
+                            return midAngle(d2) < Math.PI ? "start" : "end";
+                        };
+                    });
+
+                text.exit()
+                    .remove();
+
+                /* ------- SLICE TO TEXT POLYLINES -------*/
+
+                var polyline = svg.select(".lines").selectAll("polyline")
+                    .data(pie(data), key);
+
+                polyline.enter()
+                    .append("polyline");
+
+                polyline.transition().duration(1000)
+                    .attrTween("points", function(d) {
+                        this._current = this._current || d;
+                        var interpolate = d3.interpolate(this._current, d);
+                        this._current = interpolate(0);
+                        return function(t) {
+                            var d2 = interpolate(t);
+                            var pos = outerArc.centroid(d2);
+                            pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+                            return [arc.centroid(d2), outerArc.centroid(d2), pos];
+                        };
+                    });
+
+                polyline.exit()
+                    .remove();
+            };
+
+        }
+    </script>
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+</body>
