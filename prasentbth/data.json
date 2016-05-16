@@ -33,7 +33,7 @@
         "comfort": "ja",
         "weekWithout": "ja",
         "stress": "ja",
-        "disadvantages": "erreichbarkeit"
+        "disadvantages": "Erreichbarkeit"
     }, {
         "alter": "21-25",
         "geschlecht": "w",
@@ -118,7 +118,7 @@
         "comfort": "ja",
         "weekWithout": "nein",
         "stress": "manchmal",
-        "disadvantages": "gesundheitlich, sozial"
+        "disadvantages": "Gesundheit, sozial"
     }, {
         "alter": "21-25",
         "geschlecht": "m",
@@ -169,7 +169,7 @@
         "comfort": "ja",
         "weekWithout": "nein",
         "stress": "manchmal",
-        "disadvantages": "augen"
+        "disadvantages": "Augen"
     }, {
         "alter": "17-20",
         "geschlecht": "w",
@@ -186,7 +186,7 @@
         "comfort": "ja",
         "weekWithout": "nein",
         "stress": "manchmal",
-        "disadvantages": "abhängigkeit"
+        "disadvantages": "Abhängigkeit"
     }, {
         "alter": "17-20",
         "geschlecht": "w",
@@ -203,7 +203,7 @@
         "comfort": "ja",
         "weekWithout": "nein",
         "stress": "manchmal",
-        "disadvantages": "abhängigkeit, beschäftigung"
+        "disadvantages": "Abhängigkeit, Beschäftigung"
     }, {
         "alter": "21-25",
         "geschlecht": "m",
@@ -271,7 +271,7 @@
         "comfort": "ja",
         "weekWithout": "ja",
         "stress": "manchmal",
-        "disadvantages": "gesundheitlich, augen"
+        "disadvantages": "Gesundheit, Augen"
     }, {
         "alter": "17-20",
         "geschlecht": "m",
@@ -305,7 +305,7 @@
         "comfort": "ja",
         "weekWithout": "ja",
         "stress": "ja",
-        "disadvantages": "zeitverlust"
+        "disadvantages": "Zeitverlust"
     }, {
         "alter": "25+",
         "geschlecht": "m",
@@ -356,6 +356,6 @@
         "comfort": "ja",
         "weekWithout": "ja",
         "stress": "ja",
-        "disadvantages": "gesundheitlich, augen"
+        "disadvantages": "Gesundheit, Augen"
     }]
 }
